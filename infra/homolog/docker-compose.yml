@@ -1,4 +1,63 @@
 services:
+  postgres-homolog:
+    image: postgres:16-alpine
+    container_name: postgres-homolog
+    environment:
+      POSTGRES_USER: receitas
+      POSTGRES_PASSWORD: ${DB_PASSWORD_HOMOLOG}
+      POSTGRES_DB: receitas_homolog
+    volumes:
+      - postgres-homolog-data:/var/lib/postgresql/data
+    networks:
+      - homolog-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U receitas -d receitas_homolog"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  flyway-homolog:
+    image: flyway/flyway:10-alpine
+    container_name: flyway-homolog
+    command: migrate
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres-homolog:5432/receitas_homolog
+      FLYWAY_USER: receitas
+      FLYWAY_PASSWORD: ${DB_PASSWORD_HOMOLOG}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_CONNECT_RETRIES: 10
+    volumes:
+      - ../../migrations:/flyway/sql:ro
+    depends_on:
+      postgres-homolog:
+        condition: service_healthy
+    networks:
+      - homolog-network
+
+  api-homolog:
+    image: ghcr.io/henriquekon/ci-cd-pipeline-2-env:latest
+    container_name: api-homolog
+    expose:
+      - "5000"
+    environment:
+      DB_HOST: postgres-homolog
+      DB_PORT: 5432
+      DB_USER: receitas
+      DB_PASSWORD: ${DB_PASSWORD_HOMOLOG}
+      DB_NAME: receitas_homolog
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER}
+      MAIL_PASS: ${MAIL_PASS}
+      MAIL_FROM: ${MAIL_FROM}
+      MAIL_TO: ${MAIL_TO}
+    depends_on:
+      flyway-homolog:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - homolog-network
+
   nginx-homolog:
     image: nginx:latest
     container_name: nginx-homolog
@@ -7,34 +66,14 @@ services:
     volumes:
       - ../../html:/usr/share/nginx/html
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    restart: unless-stopped
-    networks:
-      - homolog-network
     depends_on:
       - api-homolog
-
-  api-homolog:
-    build:
-      context: ../../api
-      dockerfile: Dockerfile
-    container_name: api-homolog
-    expose:
-      - "5000"
-    environment:
-      DB_HOST: ${DB_HOST_HOMOLOG}
-      DB_PORT: ${DB_PORT_HOMOLOG:-5432}
-      DB_USER: ${DB_USER_HOMOLOG}
-      DB_PASSWORD: ${DB_PASSWORD_HOMOLOG}
-      DB_NAME: ${DB_NAME_HOMOLOG}
-      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USER: ${MAIL_USER}
-      MAIL_PASS: ${MAIL_PASS}
-      MAIL_FROM: ${MAIL_FROM}
-      MAIL_TO: ${MAIL_TO}
     restart: unless-stopped
     networks:
       - homolog-network
+
+volumes:
+  postgres-homolog-data:
 
 networks:
   homolog-network:

@@ -1,4 +1,63 @@
 services:
+  postgres-prod:
+    image: postgres:16-alpine
+    container_name: postgres-prod
+    environment:
+      POSTGRES_USER: receitas
+      POSTGRES_PASSWORD: ${DB_PASSWORD_PROD}
+      POSTGRES_DB: receitas_prod
+    volumes:
+      - postgres-prod-data:/var/lib/postgresql/data
+    networks:
+      - prod-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U receitas -d receitas_prod"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  flyway-prod:
+    image: flyway/flyway:10-alpine
+    container_name: flyway-prod
+    command: migrate
+    environment:
+      FLYWAY_URL: jdbc:postgresql://postgres-prod:5432/receitas_prod
+      FLYWAY_USER: receitas
+      FLYWAY_PASSWORD: ${DB_PASSWORD_PROD}
+      FLYWAY_LOCATIONS: filesystem:/flyway/sql
+      FLYWAY_CONNECT_RETRIES: 10
+    volumes:
+      - ../../migrations:/flyway/sql:ro
+    depends_on:
+      postgres-prod:
+        condition: service_healthy
+    networks:
+      - prod-network
+
+  api-prod:
+    image: ghcr.io/henriquekon/ci-cd-pipeline-2-env:latest
+    container_name: api-prod
+    expose:
+      - "5000"
+    environment:
+      DB_HOST: postgres-prod
+      DB_PORT: 5432
+      DB_USER: receitas
+      DB_PASSWORD: ${DB_PASSWORD_PROD}
+      DB_NAME: receitas_prod
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USER: ${MAIL_USER}
+      MAIL_PASS: ${MAIL_PASS}
+      MAIL_FROM: ${MAIL_FROM}
+      MAIL_TO: ${MAIL_TO}
+    depends_on:
+      flyway-prod:
+        condition: service_completed_successfully
+    restart: unless-stopped
+    networks:
+      - prod-network
+
   nginx-prod:
     image: nginx:latest
     container_name: nginx-prod
@@ -7,34 +66,14 @@ services:
     volumes:
       - ../../html:/usr/share/nginx/html
       - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
-    restart: unless-stopped
-    networks:
-      - prod-network
     depends_on:
       - api-prod
-
-  api-prod:
-    build:
-      context: ../../api
-      dockerfile: Dockerfile
-    container_name: api-prod
-    expose:
-      - "5000"
-    environment:
-      DB_HOST: ${DB_HOST_PROD}
-      DB_PORT: ${DB_PORT_PROD:-5432}
-      DB_USER: ${DB_USER_PROD}
-      DB_PASSWORD: ${DB_PASSWORD_PROD}
-      DB_NAME: ${DB_NAME_PROD}
-      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
-      MAIL_PORT: ${MAIL_PORT:-587}
-      MAIL_USER: ${MAIL_USER}
-      MAIL_PASS: ${MAIL_PASS}
-      MAIL_FROM: ${MAIL_FROM}
-      MAIL_TO: ${MAIL_TO}
     restart: unless-stopped
     networks:
       - prod-network
+
+volumes:
+  postgres-prod-data:
 
 networks:
   prod-network:
