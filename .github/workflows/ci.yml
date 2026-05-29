@@ -1,4 +1,4 @@
-name: "CI: Testes e Qualidade"
+name: "CI/CD Pipeline"
 
 on:
   push:
@@ -6,25 +6,42 @@ on:
   pull_request:
     branches: ["**"]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ghcr.io/henriquekon/ci-cd-pipeline-2-env
+
 jobs:
   ci:
     name: Linter + Testes
     runs-on: ubuntu-latest
 
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: receitas
+          POSTGRES_PASSWORD: postgres_ci
+          POSTGRES_DB: receitas_test
+        options: >-
+          --health-cmd "pg_isready -U receitas -d receitas_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+        ports:
+          - 5432:5432
+
     env:
-      DB_HOST_TESTING: ${{ secrets.DB_HOST_TESTING }}
-      DB_PORT_TESTING: 5432
-      DB_USER_TESTING: neondb_owner
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      DB_NAME_TESTING: neondb
-      MAILTRAP_USER: ${{ secrets.MAILTRAP_USER }}
-      MAILTRAP_PASS: ${{ secrets.MAILTRAP_PASS }}
-      MAILTRAP_API_TOKEN: ${{ secrets.MAILTRAP_API_TOKEN }}
-      MAILTRAP_INBOX_ID: ${{ secrets.MAILTRAP_INBOX_ID }}
+      DB_HOST: localhost
+      DB_PORT: 5432
+      DB_USER: receitas
+      DB_PASSWORD: postgres_ci
+      DB_NAME: receitas_test
       MAIL_HOST: sandbox.smtp.mailtrap.io
       MAIL_PORT: 2525
       MAIL_FROM: test@receitas.com
       MAIL_TO: test@receitas.com
+      MAILTRAP_USER: ${{ secrets.MAILTRAP_USER }}
+      MAILTRAP_PASS: ${{ secrets.MAILTRAP_PASS }}
 
     steps:
       - name: Checkout
@@ -40,16 +57,55 @@ jobs:
       - name: Instalar dependências
         run: pip install flask flask-cors psycopg2-binary reportlab pytest flake8 requests
 
+      - name: Aplicar migrations no banco de teste
+        run: |
+          docker run --rm \
+            --network host \
+            -v ${{ github.workspace }}/migrations:/flyway/sql:ro \
+            flyway/flyway:10-alpine \
+            -url="jdbc:postgresql://localhost:5432/receitas_test" \
+            -user=receitas \
+            -password=postgres_ci \
+            migrate
+
       - name: Análise de qualidade (Flake8)
         run: flake8 api/app.py --max-line-length=140 --extend-ignore=E127,E128,E122
 
-      - name: Executar testes com cobertura
-        run: |
-          python -m pytest tests/tests.py -v --tb=short
+      - name: Executar testes
+        run: python -m pytest tests/tests.py -v --tb=short
+
+  build-and-push:
+    name: Build e push da imagem Docker
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login no ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e push
+        uses: docker/build-push-action@v5
+        with:
+          context: ./api
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}:latest
+            ${{ env.IMAGE_NAME }}:${{ github.sha }}
 
   deploy-homolog:
     name: Deploy Homologação
-    needs: ci
+    needs: build-and-push
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
 
@@ -61,3 +117,18 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: bash ~/receitas-app/scripts/deploy-homolog.sh
+
+  deploy-prod:
+    name: Deploy Produção
+    needs: deploy-homolog
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: bash ~/receitas-app/scripts/deploy-prod.sh
