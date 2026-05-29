@@ -2,33 +2,29 @@
 set -e
 
 RED='\033[0;31m'; GREEN='\033[0;32m'; YELLOW='\033[1;33m'; BLUE='\033[0;34m'; NC='\033[0m'
-
 info()    { echo -e "${BLUE}[INFO]${NC}  $1"; }
 success() { echo -e "${GREEN}[OK]${NC}      $1"; }
 warn()    { echo -e "${YELLOW}[AVISO]${NC} $1"; }
 error()   { echo -e "${RED}[ERRO]${NC}   $1"; exit 1; }
 
-REPO_URL="https://github.com/henriquekon/GC_aula06.git"
+REPO_URL="https://github.com/henriquekon/ci-cd-pipeline-2-env.git"
 REPO_DIR="$HOME/receitas-app"
-DB_PORT=5432
-DB_USER=neondb_owner
-DB_NAME=neondb
 
 echo -e "\n${BLUE}========================================${NC}"
 echo -e "${BLUE}  Instalador – Sistema de Receitas      ${NC}"
 echo -e "${BLUE}========================================${NC}\n"
 
-# Bancos
-info "Configuração dos bancos de dados (Neon)"
+# Senhas dos bancos
+info "Configuração dos bancos de dados (locais em container)"
 echo ""
-read -rp "Host do banco de PRODUÇÃO: " DB_HOST_PROD
-read -rp "Host do banco de HOMOLOGAÇÃO: " DB_HOST_HOMOLOG
-read -rsp "Senha dos bancos (mesma para ambos): " DB_PASSWORD
+read -rsp "Senha do banco de HOMOLOGAÇÃO: " DB_PASSWORD_HOMOLOG
+echo ""
+read -rsp "Senha do banco de PRODUÇÃO: " DB_PASSWORD_PROD
 echo ""
 
-[[ -z "$DB_HOST_PROD" || -z "$DB_HOST_HOMOLOG" || -z "$DB_PASSWORD" ]] && \
-  error "Host de produção, host de homologação e senha são obrigatórios."
-success "Configuração dos bancos salva."
+[[ -z "$DB_PASSWORD_HOMOLOG" || -z "$DB_PASSWORD_PROD" ]] && \
+  error "As senhas dos bancos são obrigatórias."
+success "Senhas salvas."
 echo ""
 
 # E-mail
@@ -76,16 +72,6 @@ sudo ufw allow 8081/tcp
 success "Portas 8080 e 8081 liberadas."
 echo ""
 
-# psql
-if ! command -v psql &>/dev/null; then
-  info "Instalando cliente PostgreSQL (psql)..."
-  sudo apt update -qq
-  sudo apt install -y -qq postgresql-client
-  success "psql instalado."
-else
-  success "psql já instalado."
-fi
-
 # Repositório
 if [ -d "$REPO_DIR/.git" ]; then
   info "Repositório já existe – atualizando..."
@@ -107,58 +93,32 @@ MAIL_PASS=${MAIL_PASS}
 MAIL_FROM=${MAIL_FROM}
 MAIL_TO=${MAIL_TO}
 
-DB_HOST_PROD=${DB_HOST_PROD}
-DB_PORT_PROD=${DB_PORT}
-DB_USER_PROD=${DB_USER}
-DB_PASSWORD_PROD=${DB_PASSWORD}
-DB_NAME_PROD=${DB_NAME}
-
-DB_HOST_HOMOLOG=${DB_HOST_HOMOLOG}
-DB_PORT_HOMOLOG=${DB_PORT}
-DB_USER_HOMOLOG=${DB_USER}
-DB_PASSWORD_HOMOLOG=${DB_PASSWORD}
-DB_NAME_HOMOLOG=${DB_NAME}
+DB_PASSWORD_HOMOLOG=${DB_PASSWORD_HOMOLOG}
+DB_PASSWORD_PROD=${DB_PASSWORD_PROD}
 EOF
 success ".env criado."
 echo ""
 
-# Migrations
-run_migrations() {
-  local label="$1"
-  local host="$2"
-
-  info "Aplicando migrations no banco de ${label}..."
-  for sql_file in "$REPO_DIR"/migrations/V*.sql; do
-    [ -f "$sql_file" ] || continue
-    info "  → $(basename "$sql_file")"
-    PGPASSWORD="$DB_PASSWORD" psql \
-      "postgresql://$DB_USER:$DB_PASSWORD@$host:$DB_PORT/$DB_NAME?sslmode=require" \
-      -f "$sql_file" -q
-  done
-  success "Migrations de ${label} aplicadas."
-}
-
-run_migrations "PRODUÇÃO" "$DB_HOST_PROD"
-run_migrations "HOMOLOGAÇÃO" "$DB_HOST_HOMOLOG"
+# Login no ghcr.io (para baixar a imagem privada, se necessário)
+info "Login no GitHub Container Registry..."
+read -rp "GitHub username: " GH_USER
+read -rsp "GitHub token (com permissão read:packages): " GH_TOKEN
+echo ""
+echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin
+success "Login no ghcr.io realizado."
 echo ""
 
-# Containers
-info "Subindo ambiente de PRODUÇÃO (porta 8080)..."
-sudo docker compose \
-  -f "$REPO_DIR/infra/prod/docker-compose.yml" \
-  --env-file "$REPO_DIR/.env" \
-  up -d --build
-success "Produção no ar."
+# Sobe ambientes
+info "Subindo ambiente de HOMOLOGAÇÃO..."
+bash "$REPO_DIR/scripts/deploy-homolog.sh"
 
-info "Subindo ambiente de HOMOLOGAÇÃO (porta 8081)..."
-sudo docker compose \
-  -f "$REPO_DIR/infra/homolog/docker-compose.yml" \
-  --env-file "$REPO_DIR/.env" \
-  up -d --build
-success "Homologação no ar."
+info "Subindo ambiente de PRODUÇÃO..."
+bash "$REPO_DIR/scripts/deploy-prod.sh"
+
 echo ""
-
+echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Instalação concluída!                 ${NC}"
+echo -e "${GREEN}========================================${NC}"
 echo ""
 echo -e "  Produção:     ${BLUE}http://localhost:8080${NC}"
 echo -e "  Homologação:  ${BLUE}http://localhost:8081${NC}"
