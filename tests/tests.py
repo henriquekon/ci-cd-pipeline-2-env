@@ -358,11 +358,15 @@ class TestEmailReal:
 
     def _buscar_emails(self):
         if not MAILTRAP_API_TOKEN:
+            print("[DEBUG] MAILTRAP_API_TOKEN vazio!")
             return []
         resp = requests.get(
             f"https://mailtrap.io/api/v1/inboxes/{MAILTRAP_INBOX_ID}/messages",
             headers={"Api-Token": MAILTRAP_API_TOKEN}
         )
+        print(f"[DEBUG] Mailtrap status: {resp.status_code}")
+        print(f"[DEBUG] Mailtrap inbox ID usado: {MAILTRAP_INBOX_ID}")
+        print(f"[DEBUG] Mailtrap resposta: {resp.text[:300]}")
         return resp.json() if resp.status_code == 200 else []
 
     # 15 - e-mail ao criar receita 
