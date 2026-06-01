@@ -13,16 +13,15 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'api'))
 # Banco
 
 DB_CONFIG = {
-    'host': os.environ.get('DB_HOST_TESTING', 'localhost'),
-    'port': int(os.environ.get('DB_PORT_TESTING', 5432)),
-    'user': os.environ.get('DB_USER_TESTING', 'neondb_owner'),
-    'password': os.environ.get('DB_PASSWORD', ''),
-    'database': os.environ.get('DB_NAME_TESTING', 'neondb'),
-    'sslmode': 'require',
+    'host': os.environ.get('DB_HOST', 'localhost'),
+    'port': int(os.environ.get('DB_PORT', 5432)),
+    'user': os.environ.get('DB_USER', 'receitas'),
+    'password': os.environ.get('DB_PASSWORD', 'postgres_ci'),
+    'database': os.environ.get('DB_NAME', 'receitas_test'),
 }
 
 MAILTRAP_API_TOKEN = os.environ.get('MAILTRAP_API_TOKEN', '')
-MAILTRAP_INBOX_ID = os.environ.get('MAILTRAP_INBOX_ID', '4628476')
+MAILTRAP_INBOX_ID = os.environ.get('MAILTRAP_INBOX_ID', '')
 
 # Em testes, vou utilizar mailtrap (pois gmail dificulta esse tipo de envio, e mailtrap apresenta um ambiente já pronto para isso).
 # Obs: a ideia é funcionar exatamente igual, a única coisa que vai mudar são as credenciais específicas. Qualquer erro que ocorre
