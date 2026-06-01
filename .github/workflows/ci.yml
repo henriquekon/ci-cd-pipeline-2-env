@@ -43,7 +43,7 @@ jobs:
       MAILTRAP_USER: ${{ secrets.MAILTRAP_USER }}
       MAILTRAP_PASS: ${{ secrets.MAILTRAP_PASS }}
       MAILTRAP_API_TOKEN: ${{ secrets.MAILTRAP_API_TOKEN }}
-      MAILTRAP_INBOX_ID: "4628476"
+      MAILTRAP_INBOX_ID: ${{ secrets.MAILTRAP_INBOX_ID }}
 
     steps:
       - name: Checkout

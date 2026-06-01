@@ -381,15 +381,15 @@ class TestEmailReal:
         result = app_module.send_email(subject, app_module.build_email_body("create", receita))
         assert result is True
 
-        time.sleep(3)
+        time.sleep(5)
         emails = self._buscar_emails()
         subjects = [e.get("subject", "") for e in emails]
         assert any("TESTE_EmailCreate" in s for s in subjects)
 
     # 16 - e-mail ao atualizar receita
     def test_email_enviado_ao_atualizar(self, app_module):
+        time.sleep(5)
         self._limpar_inbox()
-        time.sleep(1)
 
         app_module.EMAIL_CONFIG.update(EMAIL_CONFIG)
         receita = {
@@ -402,7 +402,7 @@ class TestEmailReal:
         result = app_module.send_email(subject, app_module.build_email_body("update", receita))
         assert result is True
 
-        time.sleep(3)
+        time.sleep(5)
         emails = self._buscar_emails()
         subjects = [e.get("subject", "") for e in emails]
         assert any("TESTE_EmailUpdate" in s for s in subjects)
