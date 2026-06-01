@@ -6,6 +6,7 @@ import pytest
 import psycopg2
 import psycopg2.extras
 import requests
+import smtplib
 from unittest.mock import patch, MagicMock
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'api'))
@@ -382,8 +383,7 @@ class TestEmailReal:
         self._limpar_inbox()
 
         app_module.EMAIL_CONFIG.update(EMAIL_CONFIG)
-        print(f"[DEBUG] EMAIL_CONFIG usado: {app_module.EMAIL_CONFIG}")
-        
+
         receita = {
             "nome": "TESTE_EmailCreate",
             "descricao": "Teste de envio",
@@ -391,7 +391,10 @@ class TestEmailReal:
             "tipo_receita": "doce"
         }
         subject = f"[Receitas] Nova receita criada: {receita['nome']}"
-        result = app_module.send_email(subject, app_module.build_email_body("create", receita))
+
+        with patch.object(app_module, 'smtplib', smtplib):
+            result = app_module.send_email(subject, app_module.build_email_body("create", receita))
+
         print(f"[DEBUG] send_email result: {result}")
         assert result is True
 
@@ -407,6 +410,7 @@ class TestEmailReal:
         self._limpar_inbox()
 
         app_module.EMAIL_CONFIG.update(EMAIL_CONFIG)
+
         receita = {
             "nome": "TESTE_EmailUpdate",
             "descricao": "Teste de atualização",
@@ -414,10 +418,14 @@ class TestEmailReal:
             "tipo_receita": "salgada"
         }
         subject = f"[Receitas] Receita atualizada: {receita['nome']}"
-        result = app_module.send_email(subject, app_module.build_email_body("update", receita))
+
+        with patch.object(app_module, 'smtplib', smtplib):
+            result = app_module.send_email(subject, app_module.build_email_body("update", receita))
+
+        print(f"[DEBUG] send_email result: {result}")
         assert result is True
 
-        time.sleep(5)
+        time.sleep(8)
         emails = self._buscar_emails()
         subjects = [e.get("subject", "") for e in emails]
         assert any("TESTE_EmailUpdate" in s for s in subjects)
