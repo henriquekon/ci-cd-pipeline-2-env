@@ -22,6 +22,7 @@ DB_CONFIG = {
 
 MAILTRAP_API_TOKEN = os.environ.get('MAILTRAP_API_TOKEN', '')
 MAILTRAP_INBOX_ID = os.environ.get('MAILTRAP_INBOX_ID', '')
+MAILTRAP_ACCOUNT_ID = os.environ.get('MAILTRAP_ACCOUNT_ID', '')
 
 # Em testes, vou utilizar mailtrap (pois gmail dificulta esse tipo de envio, e mailtrap apresenta um ambiente já pronto para isso).
 # Obs: a ideia é funcionar exatamente igual, a única coisa que vai mudar são as credenciais específicas. Qualquer erro que ocorre
@@ -352,23 +353,21 @@ class TestEmailReal:
         if not MAILTRAP_API_TOKEN:
             return
         requests.patch(
-            f"https://mailtrap.io/api/v2/inboxes/{MAILTRAP_INBOX_ID}/clean",
+            f"https://mailtrap.io/api/accounts/{MAILTRAP_ACCOUNT_ID}/inboxes/{MAILTRAP_INBOX_ID}/clean",
             headers={"Api-Token": MAILTRAP_API_TOKEN}
         )
+        time.sleep(2)
 
     def _buscar_emails(self):
         if not MAILTRAP_API_TOKEN:
             return []
         resp = requests.get(
-            f"https://mailtrap.io/api/v2/inboxes/{MAILTRAP_INBOX_ID}/messages",
+            f"https://mailtrap.io/api/accounts/{MAILTRAP_ACCOUNT_ID}/inboxes/{MAILTRAP_INBOX_ID}/messages",
             headers={"Api-Token": MAILTRAP_API_TOKEN}
         )
-        print(f"[DEBUG] Mailtrap status: {resp.status_code}")
-        print(f"[DEBUG] Mailtrap resposta: {resp.text[:300]}")
-        if resp.status_code != 200:
-            return []
-        data = resp.json()
-        return data.get("data", data) if isinstance(data, dict) else data
+        print(f"[DEBUG] status: {resp.status_code}")
+        print(f"[DEBUG] resposta: {resp.text[:300]}")
+        return resp.json() if resp.status_code == 200 else []
 
     # 15 - e-mail ao criar receita 
     def test_email_enviado_ao_criar(self, app_module):
