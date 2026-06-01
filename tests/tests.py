@@ -378,10 +378,9 @@ class TestEmailReal:
         print(f"[DEBUG] account_id usado: {MAILTRAP_ACCOUNT_ID}")
         return resp.json() if resp.status_code == 200 else []
 
-    # 15 - e-mail ao criar receita 
+    # 15 - e-mail ao criar receita
     def test_email_enviado_ao_criar(self, app_module):
         self._limpar_inbox()
-
         app_module.EMAIL_CONFIG.update(EMAIL_CONFIG)
 
         receita = {
@@ -392,12 +391,12 @@ class TestEmailReal:
         }
         subject = f"[Receitas] Nova receita criada: {receita['nome']}"
 
-        with patch.object(app_module, 'smtplib', smtplib):
+        import smtplib as real_smtplib
+        with patch('app.smtplib.SMTP', wraps=real_smtplib.SMTP):
             result = app_module.send_email(subject, app_module.build_email_body("create", receita))
 
         print(f"[DEBUG] send_email result: {result}")
         assert result is True
-
         time.sleep(8)
         emails = self._buscar_emails()
         print(f"[DEBUG] emails encontrados: {len(emails)}")
@@ -408,7 +407,6 @@ class TestEmailReal:
     def test_email_enviado_ao_atualizar(self, app_module):
         time.sleep(5)
         self._limpar_inbox()
-
         app_module.EMAIL_CONFIG.update(EMAIL_CONFIG)
 
         receita = {
@@ -419,12 +417,12 @@ class TestEmailReal:
         }
         subject = f"[Receitas] Receita atualizada: {receita['nome']}"
 
-        with patch.object(app_module, 'smtplib', smtplib):
+        import smtplib as real_smtplib
+        with patch('app.smtplib.SMTP', wraps=real_smtplib.SMTP):
             result = app_module.send_email(subject, app_module.build_email_body("update", receita))
 
         print(f"[DEBUG] send_email result: {result}")
         assert result is True
-
         time.sleep(8)
         emails = self._buscar_emails()
         subjects = [e.get("subject", "") for e in emails]
