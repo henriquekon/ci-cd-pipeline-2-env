@@ -383,6 +383,10 @@ class TestEmailReal:
         self._limpar_inbox()
         app_module.EMAIL_CONFIG.update(EMAIL_CONFIG)
 
+        print(f"[DEBUG] MAILTRAP_USER env: {os.environ.get('MAILTRAP_USER', 'NAO_DEFINIDO')}")
+        print(f"[DEBUG] EMAIL_CONFIG final: host={app_module.EMAIL_CONFIG['host']} user={app_module.EMAIL_CONFIG['user']} port={app_module.EMAIL_CONFIG['port']}")
+        print(f"[DEBUG] Inbox ID: {MAILTRAP_INBOX_ID}, Account ID: {MAILTRAP_ACCOUNT_ID}")
+
         receita = {
             "nome": "TESTE_EmailCreate",
             "descricao": "Teste de envio",
