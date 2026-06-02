@@ -56,7 +56,7 @@ def clean_test_db():
 
 @pytest.fixture(scope="session")
 def app_module():
-    with patch("psycopg2.connect"), patch("smtplib.SMTP"):
+    with patch("psycopg2.connect"):
         import importlib
         import app as _app
         importlib.reload(_app)
