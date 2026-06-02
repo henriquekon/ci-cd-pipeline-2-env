@@ -367,25 +367,16 @@ class TestEmailReal:
             f"https://mailtrap.io/api/accounts/{MAILTRAP_ACCOUNT_ID}/inboxes",
             headers={"Api-Token": MAILTRAP_API_TOKEN}
         )
-        print(f"[DEBUG] inboxes: {inboxes_resp.text[:500]}")
         
         resp = requests.get(
             f"https://mailtrap.io/api/accounts/{MAILTRAP_ACCOUNT_ID}/inboxes/{MAILTRAP_INBOX_ID}/messages",
             headers={"Api-Token": MAILTRAP_API_TOKEN}
         )
-        print(f"[DEBUG] status: {resp.status_code}")
-        print(f"[DEBUG] inbox_id usado: {MAILTRAP_INBOX_ID}")
-        print(f"[DEBUG] account_id usado: {MAILTRAP_ACCOUNT_ID}")
-        return resp.json() if resp.status_code == 200 else []
 
     # 15 - e-mail ao criar receita
     def test_email_enviado_ao_criar(self, app_module):
         self._limpar_inbox()
         app_module.EMAIL_CONFIG.update(EMAIL_CONFIG)
-
-        print(f"[DEBUG] MAILTRAP_USER env: {os.environ.get('MAILTRAP_USER', 'NAO_DEFINIDO')}")
-        print(f"[DEBUG] EMAIL_CONFIG final: host={app_module.EMAIL_CONFIG['host']} user={app_module.EMAIL_CONFIG['user']} port={app_module.EMAIL_CONFIG['port']}")
-        print(f"[DEBUG] Inbox ID: {MAILTRAP_INBOX_ID}, Account ID: {MAILTRAP_ACCOUNT_ID}")
 
         receita = {
             "nome": "TESTE_EmailCreate",
@@ -399,11 +390,9 @@ class TestEmailReal:
         with patch('app.smtplib.SMTP', wraps=real_smtplib.SMTP):
             result = app_module.send_email(subject, app_module.build_email_body("create", receita))
 
-        print(f"[DEBUG] send_email result: {result}")
         assert result is True
         time.sleep(8)
         emails = self._buscar_emails()
-        print(f"[DEBUG] emails encontrados: {len(emails)}")
         subjects = [e.get("subject", "") for e in emails]
         assert any("TESTE_EmailCreate" in s for s in subjects)
 
@@ -425,7 +414,6 @@ class TestEmailReal:
         with patch('app.smtplib.SMTP', wraps=real_smtplib.SMTP):
             result = app_module.send_email(subject, app_module.build_email_body("update", receita))
 
-        print(f"[DEBUG] send_email result: {result}")
         assert result is True
         time.sleep(8)
         emails = self._buscar_emails()
