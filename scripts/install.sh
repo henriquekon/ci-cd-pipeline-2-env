@@ -10,39 +10,37 @@ error()   { echo -e "${RED}[ERRO]${NC}   $1"; exit 1; }
 REPO_URL="https://github.com/henriquekon/ci-cd-pipeline-2-env.git"
 REPO_DIR="$HOME/receitas-app"
 
+# ── valores padrão (EDITAR ANTES DE RODAR)
+GH_USER="henriquekon"
+GH_TOKEN=""                          # PREENCHER token com read:packages
+MAIL_HOST="sandbox.smtp.mailtrap.io"
+MAIL_PORT="587"
+MAIL_USER=""                         # PREENCHER usuário SMTP Mailtrap
+MAIL_PASS=""                         # PREENCHER senha SMTP Mailtrap
+MAIL_FROM="receitas@app.com"
+ADMIN_EMAIL=""                       # PREENCHER com email usuário admin
+
 echo -e "\n${BLUE}========================================${NC}"
 echo -e "${BLUE}  Instalador – Sistema de Receitas      ${NC}"
 echo -e "${BLUE}========================================${NC}\n"
 
 # Senhas dos bancos
-info "Configuração dos bancos de dados (locais em container)"
+info "Configuração dos bancos de dados"
 echo ""
-read -rsp "Senha do banco de HOMOLOGAÇÃO: " DB_PASSWORD_HOMOLOG
-echo ""
-read -rsp "Senha do banco de PRODUÇÃO: " DB_PASSWORD_PROD
-echo ""
-
-[[ -z "$DB_PASSWORD_HOMOLOG" || -z "$DB_PASSWORD_PROD" ]] && \
-  error "As senhas dos bancos são obrigatórias."
+read -rsp "Senha do banco de HOMOLOGAÇÃO: " DB_PASSWORD_HOMOLOG; echo ""
+read -rsp "Senha do banco de PRODUÇÃO: "    DB_PASSWORD_PROD;    echo ""
+[[ -z "$DB_PASSWORD_HOMOLOG" || -z "$DB_PASSWORD_PROD" ]] && error "Senhas obrigatórias."
 success "Senhas salvas."
 echo ""
 
-# E-mail
-info "Configuração de e-mail para notificações"
-echo ""
-read -rp "Host SMTP (padrão: smtp.gmail.com): " MAIL_HOST
-MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
-read -rp "Porta SMTP (padrão: 587): " MAIL_PORT
-MAIL_PORT=${MAIL_PORT:-587}
-read -rp "Usuário SMTP: " MAIL_USER
-read -rsp "Senha SMTP: " MAIL_PASS
-echo ""
-read -rp "E-mail remetente (ex: app@gmail.com): " MAIL_FROM
-read -rp "E-mail destinatário (quem recebe alertas): " MAIL_TO
+# Preenche credenciais faltantes interativamente
+[[ -z "$GH_TOKEN" ]] && { read -rsp "GitHub token (read:packages): " GH_TOKEN; echo ""; }
+[[ -z "$MAIL_USER" ]] && { read -rp "Usuário SMTP Mailtrap: " MAIL_USER; }
+[[ -z "$MAIL_PASS" ]] && { read -rsp "Senha SMTP Mailtrap: " MAIL_PASS; echo ""; }
+[[ -z "$ADMIN_EMAIL" ]] && { read -rp  "E-mail do admin (notificações): " ADMIN_EMAIL; }
 
-[[ -z "$MAIL_USER" || -z "$MAIL_PASS" || -z "$MAIL_FROM" || -z "$MAIL_TO" ]] && \
-  error "Todos os campos de e-mail são obrigatórios."
-success "Configuração de e-mail salva."
+[[ -z "$GH_TOKEN" || -z "$MAIL_USER" || -z "$MAIL_PASS" ]] && error "Credenciais incompletas."
+success "Configurações prontas."
 echo ""
 
 # Docker
@@ -91,28 +89,26 @@ MAIL_PORT=${MAIL_PORT}
 MAIL_USER=${MAIL_USER}
 MAIL_PASS=${MAIL_PASS}
 MAIL_FROM=${MAIL_FROM}
-MAIL_TO=${MAIL_TO}
 
 DB_PASSWORD_HOMOLOG=${DB_PASSWORD_HOMOLOG}
 DB_PASSWORD_PROD=${DB_PASSWORD_PROD}
+
+ADMIN_EMAIL=${ADMIN_EMAIL}
 EOF
 success ".env criado."
 echo ""
 
-# Login no ghcr.io (para baixar a imagem privada, se necessário)
+# Login ghcr.io
 info "Login no GitHub Container Registry..."
-read -rp "GitHub username: " GH_USER
-read -rsp "GitHub token (com permissão read:packages): " GH_TOKEN
-echo ""
 echo "$GH_TOKEN" | docker login ghcr.io -u "$GH_USER" --password-stdin
 success "Login no ghcr.io realizado."
 echo ""
 
 # Sobe ambientes
-info "Subindo ambiente de HOMOLOGAÇÃO..."
+info "Subindo HOMOLOGAÇÃO..."
 bash "$REPO_DIR/scripts/deploy-homolog.sh"
 
-info "Subindo ambiente de PRODUÇÃO..."
+info "Subindo PRODUÇÃO..."
 bash "$REPO_DIR/scripts/deploy-prod.sh"
 
 echo ""
@@ -120,9 +116,7 @@ echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Instalação concluída!                 ${NC}"
 echo -e "${GREEN}========================================${NC}"
 echo ""
-echo -e "  Produção:     ${BLUE}http://localhost:8080${NC}"
-echo -e "  Homologação:  ${BLUE}http://localhost:8081${NC}"
-echo ""
-echo -e "  Login:        admin / admin123"
-echo -e "  Notificações: ${MAIL_TO}"
+echo -e "  Produção:    ${BLUE}http://localhost:8080${NC}"
+echo -e "  Homologação: ${BLUE}http://localhost:8081${NC}"
+echo -e "  Login:       admin / admin123"
 echo ""

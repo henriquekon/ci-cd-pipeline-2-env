@@ -53,20 +53,20 @@ def login_required(f):
     return decorated_function
 
 
-def send_email(subject, body):
+def send_email(subject, body, to_email=None):
     try:
+        recipient = to_email or EMAIL_CONFIG['to']
         msg = MIMEMultipart('alternative')
         msg['Subject'] = subject
         msg['From'] = EMAIL_CONFIG['from']
-        msg['To'] = EMAIL_CONFIG['to']
+        msg['To'] = recipient
         msg.attach(MIMEText(body, 'html'))
 
         server = smtplib.SMTP(EMAIL_CONFIG['host'], EMAIL_CONFIG['port'])
         server.starttls()
         server.login(EMAIL_CONFIG['user'], EMAIL_CONFIG['password'])
-        server.sendmail(EMAIL_CONFIG['from'], EMAIL_CONFIG['to'], msg.as_string())
+        server.sendmail(EMAIL_CONFIG['from'], recipient, msg.as_string())
         server.quit()
-
         return True
     except Exception as e:
         print(f"[EMAIL ERROR] {e}")
@@ -116,6 +116,7 @@ def login():
     if user:
         session['user_id'] = user['id']
         session['user_name'] = user['nome']
+        session['user_email'] = user['email'] or EMAIL_CONFIG['to']
         return jsonify({'success': True, 'user': user['nome']})
     return jsonify({'success': False, 'error': 'Credenciais inválidas'}), 401
 
@@ -237,7 +238,7 @@ def create_receita():
     conn.close()
 
     subject = f"[Receitas] Nova receita criada: {nome}"
-    send_email(subject, build_email_body('create', new_receita))
+    send_email(subject, build_email_body('create', new_receita), to_email=session.get('user_email'))
 
     return jsonify({'success': True, 'id': new_receita['id']}), 201
 
@@ -271,7 +272,7 @@ def update_receita(id):
     conn.close()
 
     subject = f"[Receitas] Receita atualizada: {nome}"
-    send_email(subject, build_email_body('update', updated))
+    send_email(subject, build_email_body('update', updated), to_email=session.get('user_email'))
 
     return jsonify({'success': True})
 

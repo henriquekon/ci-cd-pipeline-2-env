@@ -1,12 +1,10 @@
--- V1__schema_inicial.sql
--- Migration inicial: criação das tabelas e dados básicos
-
 CREATE TABLE IF NOT EXISTS usuario (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100) NOT NULL,
     login VARCHAR(100) NOT NULL UNIQUE,
     senha VARCHAR(100) NOT NULL,
-    situacao VARCHAR(100) NOT NULL
+    situacao VARCHAR(100) NOT NULL,
+    email VARCHAR(200)
 );
 
 CREATE TABLE IF NOT EXISTS receita (
@@ -19,12 +17,11 @@ CREATE TABLE IF NOT EXISTS receita (
         CHECK (tipo_receita IN ('doce', 'salgada'))
 );
 
--- Seed: usuário admin
-INSERT INTO usuario (nome, login, senha, situacao)
-VALUES ('Administrador', 'admin', 'admin123', 'ativo')
+INSERT INTO usuario (nome, login, senha, situacao, email)
+VALUES ('Administrador', 'admin', 'admin123', 'ativo', '${ADMIN_EMAIL}')
 ON CONFLICT (login) DO NOTHING;
 
--- Seed: receitas iniciais
+-- seeds de receitas (igual antes)
 INSERT INTO receita (nome, descricao, custo, tipo_receita) VALUES
     ('Bolo de Chocolate', 'Bolo fofinho com cobertura de chocolate', 25.50, 'doce'),
     ('Torta de Morango', 'Torta com morangos frescos e creme', 32.00, 'doce'),

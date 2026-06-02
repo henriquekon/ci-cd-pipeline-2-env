@@ -26,6 +26,7 @@ services:
       FLYWAY_PASSWORD: ${DB_PASSWORD_HOMOLOG}
       FLYWAY_LOCATIONS: filesystem:/flyway/sql
       FLYWAY_CONNECT_RETRIES: 10
+      FLYWAY_PLACEHOLDERS_ADMIN_EMAIL: ${ADMIN_EMAIL}
     volumes:
       - ../../migrations:/flyway/sql:ro
     depends_on:
