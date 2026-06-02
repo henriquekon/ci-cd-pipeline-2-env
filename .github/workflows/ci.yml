@@ -37,7 +37,7 @@ jobs:
       DB_PASSWORD: postgres_ci
       DB_NAME: receitas_test
       MAIL_HOST: sandbox.smtp.mailtrap.io
-      MAIL_PORT: 2525
+      MAIL_PORT: 587
       MAIL_FROM: test@receitas.com
       MAIL_TO: test@receitas.com
       MAILTRAP_USER: ${{ secrets.MAILTRAP_USER }}
