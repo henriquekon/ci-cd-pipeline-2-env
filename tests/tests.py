@@ -373,6 +373,8 @@ class TestEmailReal:
             headers={"Api-Token": MAILTRAP_API_TOKEN}
         )
 
+        return resp.json() if resp.status_code == 200 else []
+
     # 15 - e-mail ao criar receita
     def test_email_enviado_ao_criar(self, app_module):
         self._limpar_inbox()
