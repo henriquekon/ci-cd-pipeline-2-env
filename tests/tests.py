@@ -100,7 +100,7 @@ class TestAuth:
 
     # 1 - login com credenciais corretas
     def test_login_success(self, client, app_module):
-        user_data = {"id": 1, "nome": "Admin", "login": "admin", "senha": "admin123", "situacao": "ativo"}
+        user_data = {"id": 1, "nome": "Admin", "login": "admin", "senha": "admin123", "situacao": "ativo", "email": "test@receitas.com"}
         with patch.object(app_module, "get_db") as mock_db:
             conn = MagicMock()
             cur = MagicMock()
