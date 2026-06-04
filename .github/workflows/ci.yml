@@ -69,6 +69,7 @@ jobs:
             -url="jdbc:postgresql://localhost:5432/receitas_test" \
             -user=receitas \
             -password=postgres_ci \
+            -placeholders.ADMIN_EMAIL=test@receitas.com \
             migrate
 
       - name: Análise de qualidade (Flake8)
