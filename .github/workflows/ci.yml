@@ -5,6 +5,7 @@ on:
     branches: ["**"]
   pull_request:
     branches: ["**"]
+  workflow_dispatch:
 
 env:
   REGISTRY: ghcr.io
@@ -124,10 +125,8 @@ jobs:
 
   deploy-prod:
     name: Deploy Produção
-    needs: deploy-homolog
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-
+    if: github.event_name == 'workflow_dispatch'
     steps:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1
