@@ -99,14 +99,24 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build e push
+      - name: Build e push API
         uses: docker/build-push-action@v5
         with:
           context: ./api
           push: true
           tags: |
-            ${{ env.IMAGE_NAME }}:latest
-            ${{ env.IMAGE_NAME }}:${{ github.sha }}
+            ${{ env.IMAGE_NAME }}-api:latest
+            ${{ env.IMAGE_NAME }}-api:${{ github.sha }}
+
+      - name: Build e push Nginx
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.nginx
+          push: true
+          tags: |
+            ${{ env.IMAGE_NAME }}-nginx:latest
+            ${{ env.IMAGE_NAME }}-nginx:${{ github.sha }}
 
   deploy-homolog:
     name: Deploy Homologação
