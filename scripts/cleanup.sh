@@ -6,11 +6,12 @@ info()    { echo -e "${BLUE}[INFO]${NC}  $1"; }
 success() { echo -e "${GREEN}[OK]${NC}      $1"; }
 warn()    { echo -e "${YELLOW}[AVISO]${NC} $1"; }
 
-REPO_DIR="$HOME/receitas-app"
-RUNNER_DIR="$HOME/actions-runner"
+ACTUAL_USER="${SUDO_USER:-$USER}"
+ACTUAL_HOME=$(getent passwd "$ACTUAL_USER" | cut -d: -f6)
+REPO_DIR="$ACTUAL_HOME/receitas-app"
+RUNNER_DIR="$ACTUAL_HOME/actions-runner"
 
-echo -e "${YELLOW}  Limpeza da VM                          ${NC}"
-
+echo -e "${YELLOW}  Limpeza da VM ${NC}"
 warn "Isso vai remover containers, imagens, volumes, Docker e o runner."
 warn "Os scripts em $REPO_DIR/scripts/ NÃO serão removidos."
 echo ""
@@ -22,10 +23,10 @@ echo ""
 if [ -f "$RUNNER_DIR/svc.sh" ]; then
   info "Removendo self-hosted runner..."
   cd "$RUNNER_DIR"
-  sudo ./svc.sh stop  2>/dev/null || true
+  sudo ./svc.sh stop 2>/dev/null || true
   sudo ./svc.sh uninstall 2>/dev/null || true
-  ./config.sh remove --unattended 2>/dev/null || true
-  cd "$HOME"
+  sudo -u "$ACTUAL_USER" ./config.sh remove --unattended 2>/dev/null || true
+  cd "$ACTUAL_HOME"
   rm -rf "$RUNNER_DIR"
   success "Runner removido."
 else
@@ -35,29 +36,17 @@ fi
 # Stacks Docker
 if command -v docker &>/dev/null; then
   info "Derrubando stack de homologação..."
-  docker compose \
-    -f "$REPO_DIR/infra/homolog/docker-compose.yml" \
-    --env-file "$REPO_DIR/.env" \
-    down --volumes 2>/dev/null || true
-
+  docker compose -f "$REPO_DIR/infra/homolog/docker-compose.yml" --env-file "$REPO_DIR/.env" down --volumes 2>/dev/null || true
   info "Derrubando stack de produção..."
-  docker compose \
-    -f "$REPO_DIR/infra/prod/docker-compose.yml" \
-    --env-file "$REPO_DIR/.env" \
-    down --volumes 2>/dev/null || true
-
+  docker compose -f "$REPO_DIR/infra/prod/docker-compose.yml" --env-file "$REPO_DIR/.env" down --volumes 2>/dev/null || true
   info "Removendo containers restantes..."
   docker ps -aq | xargs -r docker rm -f 2>/dev/null || true
-
   info "Removendo imagens..."
   docker images -q | xargs -r docker rmi -f 2>/dev/null || true
-
   info "Removendo volumes órfãos..."
   docker volume ls -q | xargs -r docker volume rm 2>/dev/null || true
-
   info "Removendo redes..."
   docker network prune -f 2>/dev/null || true
-
   info "Desinstalando Docker..."
   sudo apt purge -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin 2>/dev/null || true
   sudo rm -rf /var/lib/docker /etc/docker
@@ -89,10 +78,10 @@ else
   warn "Repositório não encontrado."
 fi
 
-rm -f "$HOME/.env" 2>/dev/null || true
+rm -f "$ACTUAL_HOME/.env" 2>/dev/null || true
 
 echo ""
-echo -e "${GREEN}  Limpeza concluída!                    ${NC}"
+echo -e "${GREEN}  Limpeza concluída!${NC}"
 echo ""
 warn "Bancos removidos junto com os volumes Docker."
 warn "Na próxima instalação as migrations recriam tudo configurado."
