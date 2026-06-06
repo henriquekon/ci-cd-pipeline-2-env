@@ -7,17 +7,30 @@ success() { echo -e "${GREEN}[OK]${NC}      $1"; }
 warn()    { echo -e "${YELLOW}[AVISO]${NC} $1"; }
 
 REPO_DIR="$HOME/receitas-app"
+RUNNER_DIR="$HOME/actions-runner"
 
-echo -e "\n${YELLOW}========================================${NC}"
-echo -e "${YELLOW}  Limpeza – VM                          ${NC}"
-echo -e "${YELLOW}========================================${NC}\n"
+echo -e "${YELLOW}  Limpeza da VM                          ${NC}"
 
-warn "Isso vai remover containers, imagens, volumes e o repositório."
-warn "Os scripts em ~/receitas-app/scripts/ NÃO serão removidos."
+warn "Isso vai remover containers, imagens, volumes, Docker e o runner."
+warn "Os scripts em $REPO_DIR/scripts/ NÃO serão removidos."
 echo ""
 read -rp "Tem certeza? (s/N): " CONFIRM
 [[ "$CONFIRM" != "s" && "$CONFIRM" != "S" ]] && echo "Cancelado." && exit 0
 echo ""
+
+# Self-hosted runner
+if [ -f "$RUNNER_DIR/svc.sh" ]; then
+  info "Removendo self-hosted runner..."
+  cd "$RUNNER_DIR"
+  sudo ./svc.sh stop  2>/dev/null || true
+  sudo ./svc.sh uninstall 2>/dev/null || true
+  ./config.sh remove --unattended 2>/dev/null || true
+  cd "$HOME"
+  rm -rf "$RUNNER_DIR"
+  success "Runner removido."
+else
+  warn "Runner não encontrado."
+fi
 
 # Stacks Docker
 if command -v docker &>/dev/null; then
@@ -42,10 +55,16 @@ if command -v docker &>/dev/null; then
   info "Removendo volumes órfãos..."
   docker volume ls -q | xargs -r docker volume rm 2>/dev/null || true
 
-  info "Removendo redes criadas..."
+  info "Removendo redes..."
   docker network prune -f 2>/dev/null || true
 
-  success "Docker limpo."
+  info "Desinstalando Docker..."
+  sudo apt purge -y -qq docker-ce docker-ce-cli containerd.io docker-compose-plugin 2>/dev/null || true
+  sudo rm -rf /var/lib/docker /etc/docker
+  sudo rm -f /usr/share/keyrings/docker-archive-keyring.gpg
+  sudo rm -f /etc/apt/sources.list.d/docker.list
+  sudo apt autoremove -y -qq
+  success "Docker removido."
 else
   warn "Docker não estava instalado."
 fi
@@ -61,28 +80,20 @@ if [ -d "$REPO_DIR" ]; then
   info "Preservando scripts..."
   SCRIPTS_TMP="$(mktemp -d)"
   cp -r "$REPO_DIR/scripts" "$SCRIPTS_TMP/"
-
-  info "Removendo repositório..."
   rm -rf "$REPO_DIR"
-
-  info "Restaurando scripts..."
   mkdir -p "$REPO_DIR"
   cp -r "$SCRIPTS_TMP/scripts" "$REPO_DIR/"
   rm -rf "$SCRIPTS_TMP"
-
-  success "Repositório removido. Scripts preservados em $REPO_DIR/scripts/"
+  success "Scripts preservados em $REPO_DIR/scripts/"
 else
   warn "Repositório não encontrado."
 fi
 
-# .env
 rm -f "$HOME/.env" 2>/dev/null || true
 
 echo ""
-echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}  Limpeza concluída!                    ${NC}"
-echo -e "${GREEN}========================================${NC}"
 echo ""
-warn "Os bancos de dados foram removidos junto com os volumes Docker."
-warn "Na próxima instalação as migrations recriam tudo automaticamente."
+warn "Bancos removidos junto com os volumes Docker."
+warn "Na próxima instalação as migrations recriam tudo configurado."
 echo ""

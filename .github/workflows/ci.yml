@@ -111,32 +111,17 @@ jobs:
   deploy-homolog:
     name: Deploy Homologação
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.ref == 'refs/heads/main'
 
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          port: 22
-          protocol: tcp
-          script: bash ~/receitas-app/scripts/deploy-homolog.sh
+      - name: Deploy homologação
+        run: bash ~/receitas-app/scripts/deploy-homolog.sh
 
   deploy-prod:
     name: Deploy Produção
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: github.event_name == 'workflow_dispatch'
-
     steps:
-      - name: Deploy via SSH
-        uses: appleboy/ssh-action@v1
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          password: ${{ secrets.SSH_PASSWORD }}
-          port: 22
-          protocol: tcp
-          script: bash ~/receitas-app/scripts/deploy-prod.sh
+      - name: Deploy produção
+        run: bash ~/receitas-app/scripts/deploy-prod.sh
