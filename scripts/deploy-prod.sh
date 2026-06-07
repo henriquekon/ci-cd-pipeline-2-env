@@ -12,6 +12,7 @@ COMPOSE_FILE="$REPO_DIR/infra/prod/docker-compose.yml"
 ENV_FILE="$REPO_DIR/.env"
 
 info "Atualizando repositório..."
+sudo chown -R "$USER:$USER" "$REPO_DIR"
 git -C "$REPO_DIR" pull --ff-only
 
 info "Atualizando stack de produção..."
