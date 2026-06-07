@@ -346,7 +346,10 @@ class TestBancoReal:
 
 
 # Teste de e-mail (atualmente, mailtrap. Pode ser configurado para utilizar outro serviço).
-# Dessa vez, assim como banco, fiz upgrade para testar com serviço real, sem mock.
+
+# SOBRE UTILIZAR MOCKS:
+# Inicialmente eu utilizei mailtrap para poder fazer sem utilizar mock. Infelizmente, precisei remover essa funcionalidade,
+# já que o mailtrap tinha limite de 50 e-mails, que foi atingido
 class TestEmailReal:
 
     # 15 - e-mail ao criar receita
@@ -359,14 +362,19 @@ class TestEmailReal:
             "tipo_receita": "doce"
         }
         subject = f"[Receitas] Nova receita criada: {receita['nome']}"
-        import smtplib as real_smtplib
-        with patch('app.smtplib.SMTP', wraps=real_smtplib.SMTP):
+        with patch('app.smtplib.SMTP') as mock_smtp:
+            mock_server = MagicMock()
+            mock_smtp.return_value = mock_server
             result = app_module.send_email(subject, app_module.build_email_body("create", receita))
-        assert result is True
+            assert result is True
+            mock_smtp.assert_called_once_with(EMAIL_CONFIG['host'], EMAIL_CONFIG['port'])
+            mock_server.starttls.assert_called_once()
+            mock_server.login.assert_called_once_with(EMAIL_CONFIG['user'], EMAIL_CONFIG['password'])
+            mock_server.sendmail.assert_called_once()
+            mock_server.quit.assert_called_once()
 
     # 16 - e-mail ao atualizar receita
     def test_email_enviado_ao_atualizar(self, app_module):
-        time.sleep(3)
         app_module.EMAIL_CONFIG.update(EMAIL_CONFIG)
         receita = {
             "nome": "TESTE_EmailUpdate",
@@ -375,10 +383,16 @@ class TestEmailReal:
             "tipo_receita": "salgada"
         }
         subject = f"[Receitas] Receita atualizada: {receita['nome']}"
-        import smtplib as real_smtplib
-        with patch('app.smtplib.SMTP', wraps=real_smtplib.SMTP):
+        with patch('app.smtplib.SMTP') as mock_smtp:
+            mock_server = MagicMock()
+            mock_smtp.return_value = mock_server
             result = app_module.send_email(subject, app_module.build_email_body("update", receita))
-        assert result is True
+            assert result is True
+            mock_smtp.assert_called_once_with(EMAIL_CONFIG['host'], EMAIL_CONFIG['port'])
+            mock_server.starttls.assert_called_once()
+            mock_server.login.assert_called_once_with(EMAIL_CONFIG['user'], EMAIL_CONFIG['password'])
+            mock_server.sendmail.assert_called_once()
+            mock_server.quit.assert_called_once()
 
 
 # Teste de PDF
