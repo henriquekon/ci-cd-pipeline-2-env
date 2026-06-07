@@ -85,6 +85,7 @@ else
   rm -rf "$REPO_DIR"
   git clone "$REPO_URL" "$REPO_DIR"
 fi
+sudo chown -R "$ACTUAL_USER:$ACTUAL_USER" "$REPO_DIR"
 success "Repositório pronto em $REPO_DIR"
 echo ""
 
