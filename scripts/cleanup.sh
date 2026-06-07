@@ -64,16 +64,9 @@ sudo ufw delete allow 8080/tcp 2>/dev/null || true
 sudo ufw delete allow 8081/tcp 2>/dev/null || true
 success "Regras removidas."
 
-# Repositório — preserva scripts/
+# Repositório
 if [ -d "$REPO_DIR" ]; then
-  info "Preservando scripts..."
-  SCRIPTS_TMP="$(mktemp -d)"
-  cp -r "$REPO_DIR/scripts" "$SCRIPTS_TMP/"
   rm -rf "$REPO_DIR"
-  mkdir -p "$REPO_DIR"
-  cp -r "$SCRIPTS_TMP/scripts" "$REPO_DIR/"
-  rm -rf "$SCRIPTS_TMP"
-  success "Scripts preservados em $REPO_DIR/scripts/"
 else
   warn "Repositório não encontrado."
 fi
