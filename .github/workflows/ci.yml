@@ -125,6 +125,8 @@ jobs:
     if: github.ref == 'refs/heads/main'
 
     steps:
+      - name: Corrigir permissões
+        run: sudo chown -R $USER:$USER ~/receitas-app
       - name: Deploy homologação
         run: bash ~/receitas-app/scripts/deploy-homolog.sh
 
@@ -133,5 +135,7 @@ jobs:
     runs-on: self-hosted
     if: github.event_name == 'workflow_dispatch'
     steps:
+      - name: Corrigir permissões
+        run: sudo chown -R $USER:$USER ~/receitas-app
       - name: Deploy produção
         run: bash ~/receitas-app/scripts/deploy-prod.sh
