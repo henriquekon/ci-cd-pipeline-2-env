@@ -15,6 +15,10 @@ info "Atualizando repositório..."
 sudo chown -R "$USER:$USER" "$REPO_DIR"
 git -C "$REPO_DIR" pull --ff-only
 
+info "Aplicando migrations..."
+docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
+  run --rm flyway-homolog
+
 info "Atualizando stack de produção..."
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
   up --pull always --remove-orphans -d
