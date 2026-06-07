@@ -17,7 +17,7 @@ git -C "$REPO_DIR" pull --ff-only
 
 info "Aplicando migrations..."
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
-  run --rm flyway-homolog
+  run --rm flyway-prod
 
 info "Atualizando stack de produção..."
 docker compose -f "$COMPOSE_FILE" --env-file "$ENV_FILE" \
