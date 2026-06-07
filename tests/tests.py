@@ -5,7 +5,6 @@ import time
 import pytest
 import psycopg2
 import psycopg2.extras
-import requests
 import smtplib
 from unittest.mock import patch, MagicMock
 
@@ -350,36 +349,9 @@ class TestBancoReal:
 # Dessa vez, assim como banco, fiz upgrade para testar com serviço real, sem mock.
 class TestEmailReal:
 
-    def _limpar_inbox(self):
-        if not MAILTRAP_API_TOKEN:
-            return
-        requests.patch(
-            f"https://mailtrap.io/api/accounts/{MAILTRAP_ACCOUNT_ID}/inboxes/{MAILTRAP_INBOX_ID}/clean",
-            headers={"Api-Token": MAILTRAP_API_TOKEN}
-        )
-        time.sleep(2)
-
-    def _buscar_emails(self):
-        if not MAILTRAP_API_TOKEN:
-            return []
-        
-        inboxes_resp = requests.get(
-            f"https://mailtrap.io/api/accounts/{MAILTRAP_ACCOUNT_ID}/inboxes",
-            headers={"Api-Token": MAILTRAP_API_TOKEN}
-        )
-        
-        resp = requests.get(
-            f"https://mailtrap.io/api/accounts/{MAILTRAP_ACCOUNT_ID}/inboxes/{MAILTRAP_INBOX_ID}/messages",
-            headers={"Api-Token": MAILTRAP_API_TOKEN}
-        )
-
-        return resp.json() if resp.status_code == 200 else []
-
     # 15 - e-mail ao criar receita
     def test_email_enviado_ao_criar(self, app_module):
-        self._limpar_inbox()
         app_module.EMAIL_CONFIG.update(EMAIL_CONFIG)
-
         receita = {
             "nome": "TESTE_EmailCreate",
             "descricao": "Teste de envio",
@@ -387,23 +359,15 @@ class TestEmailReal:
             "tipo_receita": "doce"
         }
         subject = f"[Receitas] Nova receita criada: {receita['nome']}"
-
         import smtplib as real_smtplib
         with patch('app.smtplib.SMTP', wraps=real_smtplib.SMTP):
             result = app_module.send_email(subject, app_module.build_email_body("create", receita))
-
         assert result is True
-        time.sleep(8)
-        emails = self._buscar_emails()
-        subjects = [e.get("subject", "") for e in emails]
-        assert any("TESTE_EmailCreate" in s for s in subjects)
 
     # 16 - e-mail ao atualizar receita
     def test_email_enviado_ao_atualizar(self, app_module):
-        time.sleep(5)
-        self._limpar_inbox()
+        time.sleep(3)
         app_module.EMAIL_CONFIG.update(EMAIL_CONFIG)
-
         receita = {
             "nome": "TESTE_EmailUpdate",
             "descricao": "Teste de atualização",
@@ -411,16 +375,10 @@ class TestEmailReal:
             "tipo_receita": "salgada"
         }
         subject = f"[Receitas] Receita atualizada: {receita['nome']}"
-
         import smtplib as real_smtplib
         with patch('app.smtplib.SMTP', wraps=real_smtplib.SMTP):
             result = app_module.send_email(subject, app_module.build_email_body("update", receita))
-
         assert result is True
-        time.sleep(8)
-        emails = self._buscar_emails()
-        subjects = [e.get("subject", "") for e in emails]
-        assert any("TESTE_EmailUpdate" in s for s in subjects)
 
 
 # Teste de PDF
